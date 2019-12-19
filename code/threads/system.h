@@ -17,6 +17,9 @@
 #include "timer.h"
 #include "Alarm.h"
 
+#ifdef USER_PROGRAM
+#define MaxProcessNum 32
+#endif
 // Initialization and cleanup routines
 extern void Initialize(int argc, char **argv); 	// Initialization,
 // called before anything else
@@ -35,8 +38,10 @@ extern Alarm *alarmer;
 #include "machine.h"
 #include "memorymanager.h"
 #include "swapLRU.h"
+#include "processmanager.h"
 extern Machine* machine;	// user program memory and registers
 extern MemoryManager* memoryManager;
+extern ProcessManager* processManager;
 extern SwapLRU* swapLRU;
 extern int currentProcessID;
 #endif

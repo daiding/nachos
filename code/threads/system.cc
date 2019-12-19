@@ -32,6 +32,7 @@ SynchDisk   *synchDisk;
 #ifdef USER_PROGRAM
 Machine* machine;
 MemoryManager* memoryManager;
+ProcessManager* processManager;
 SwapLRU* swapLRU;
 int currentProcessID;
 #endif
@@ -173,6 +174,7 @@ Initialize(int argc, char **argv)
 #ifdef USER_PROGRAM
     machine = new Machine(debugUserProg);	// this must come first
     memoryManager = new MemoryManager();
+    processManager = new ProcessManager(MaxProcessNum);
     swapLRU = new SwapLRU(32);
 #endif
 

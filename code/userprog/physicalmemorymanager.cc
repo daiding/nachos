@@ -27,7 +27,6 @@ int PhysicalMemoryManager::GetOneAvailablePage()
     if (physicalMemoryMap->NumClear() > 0)
     {
         int availablePage = physicalMemoryMap->Find();
-        physicalMemoryMap->Mark(availablePage);
         return availablePage;
     }
     else

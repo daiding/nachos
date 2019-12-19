@@ -21,7 +21,7 @@ int SwapDiskManager::InitialVisualMemoryPage(char *data, int dataSize)
 {
     if (swapDiskMap->NumClear() == 0)
     {
-        DEBUG('a',"Swap Disk is no available page\n");
+        DEBUG('a',"Swap Disk has no available page\n");
         return -1;
     }
     else
