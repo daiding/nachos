@@ -1,6 +1,7 @@
+#pragma once
 #include "table.h"
 
-void tableInsert(Table& table, int size,int which);
+void TableInsert(Table * table, int size, int which);
 
 
-void tableRemove(Table& table,int size,int which);
+void TableRemove(Table* table, int size, int which);

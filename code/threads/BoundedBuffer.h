@@ -1,5 +1,5 @@
 #pragma once
-#include "synch-sem.h"
+#include "synch.h"
 
 
 class BoundedBuffer {
@@ -15,12 +15,14 @@ public:
     // write 'size' bytes from 'data' into the bounded buffer.
     // ('size' may be greater than 'maxsize')
     void Write(void *data, int size);
+
+    int Size();
+
 private:
-    // ???
     int bufferSize;
-    int write;	//写入位置
-    int read;	//读出位置
-    void** buffer;
+    int writePos;	//写入位置
+    int readPos;	//读出位置
+    unsigned char* buffer;
     Semaphore* s;	//实现互斥
     Semaphore* n; //缓冲区中数目
     Semaphore* e; //空闲空间数目

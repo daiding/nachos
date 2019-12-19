@@ -2,34 +2,45 @@
 #include "system.h"
 #include <cstdio>
 
-void tableInsert(Table& table, int size, int which)
+void TableInsert(Table * table, int size, int which)
 {
-	char temp = 'a';
-	char *m;
-	int index;
-	//����֮������ͨ�������������Ƿ�һ��
-	for (int i = 0; i < size; i++)
-	{
-		char* element = new char(temp + i);
-		index=table.Alloc(reinterpret_cast<void*>(element));
-		printf("[Thread %d] insert %c to index %d\n", which,*element,index);
-		m = reinterpret_cast<char*>(table.Get(index));
-		printf("table[%d]:%c\n",index,*m);
-	}
+    ASSERT(table != NULL);
+    for(int i = 0; i < size; i++)
+    {
+        char * element = new char('a' + i % 26);
+        int index = table->Alloc(reinterpret_cast<void*>(element));
+        if(index == -1)
+        {
+            printf("[Thread %d] Table is full, wait a moment and try again\n", which);
+            delete element;
+            i--;
+            currentThread->Yield();
+            continue;
+        }
+        else
+        {
+            ASSERT(*element == *(char*)table->Get(index));
+            printf("[Thread %d] Insert '%c' to slot %d\n", which, *element, index);
+        }
+    }
 }
 
-void tableRemove(Table& table, int size, int which)
+void TableRemove(Table* table, int size, int which)
 {
-	int k=size,i=0;
-	while(k)
-	{
-		char *m=reinterpret_cast<char*>(table.Get(i));
-		if(m!=NULL)
-		{
-			table.Release(i);
-			printf("[Thread %d] remove index %d:%c\n", which, i,*m);
-			k--;
-		}
-		i++;
-	}
+    ASSERT(table != NULL);
+    for(int i = 0; i < table->Size() && size > 0; i++)
+    {
+        char* element = (char*)table->Get(i);
+        if(element == NULL)
+        {
+            printf("[Thread %d] Table slot %d is NULL\n", which, i);
+        }
+        else
+        {
+            printf("[Thread %d] Remove element %c in slot %d\n", which, *element, i);
+            table->Release(i);
+            size--;
+            delete element;
+        }
+    }
 }

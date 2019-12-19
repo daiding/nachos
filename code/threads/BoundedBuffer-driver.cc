@@ -1,20 +1,24 @@
-#include<BoundedBuffer-driver.h>
+#include"BoundedBuffer-driver.h"
 #include<cstdio>
+#include<cassert>
 
-
-void BufferWrite(BoundedBuffer& buffer,int size,int which)
+void BufferWrite(BoundedBuffer * buffer, int size, int which)
 {
-    char data[]="abcdefghijklmn";
-    printf("[Thread %d] try to write %d times\n", which,size);
-    buffer.Write(data,size);
-    printf("[Thread %d] write end\n", which);
+    char data[2] = {0};
+    for(int i = 0; i < size; i++)
+    {
+        data[0] = 'a' + Random() % 26;
+        printf("[Thread %d] Writing : %s\n", which, data);
+        buffer->Write(data, 1);
+    }
 }
 
-void BufferRead(BoundedBuffer& buffer,int size,int which)
+void BufferRead(BoundedBuffer * buffer, int size, int which)
 {
-    char* temp=new char;
-    printf("[Thread %d] try to read %d times\n", which,size);
-    buffer.Read(temp,size);
-    printf("[Thread %d] read end\n", which);
-    delete temp;
+    char data[2] = {0};
+    for(int i = 0; i < size; i++)
+    {
+        buffer->Read(data, 1);
+        printf("[Thread %d] Read : %s\n", which, data);
+    }
 }

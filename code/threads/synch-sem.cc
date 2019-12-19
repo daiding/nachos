@@ -107,7 +107,11 @@ Lock::Lock(char* debugName)
     lockSelf = new Semaphore(debugName, 1);
 }
 
-Lock::~Lock() {}
+Lock::~Lock()
+{
+    delete lockSelf;
+}
+
 void Lock::Acquire()
 {
     ASSERT(!isHeldByCurrentThread());
@@ -132,53 +136,89 @@ bool Lock::isHeldByCurrentThread()
 
 bool Lock::isAvailable()
 {
-
     return holderThread == NULL;
 }
 
 Condition::Condition(char* debugName)
 {
     name = debugName;
-    queue = new List;
-    mutex = new Semaphore(debugName, 1);
+    semSignallerBlock = new Semaphore(debugName, 0);
+    semWaiters = new Semaphore(debugName, 0);
+    semWaitersCountMutex = new Semaphore(debugName, 1);
+    waitersCount = 0;
 }
-Condition::~Condition() { }
+Condition::~Condition()
+{
+    delete semWaiters;
+    delete semSignallerBlock;
+    delete semWaitersCountMutex;
+}
 void Condition::Wait(Lock* conditionLock)
 {
     ASSERT(conditionLock->isHeldByCurrentThread());
 
-    // releasing the lock and going to sleep are
-    // *atomic* in Wait()
+    // 如果只使用信号量实现，那么还要维护等待计数，而等待计数还需要额外的保护，这会造成额外的上下文切换
+    // 而且为了保证广播逻辑的正确性，实现相当麻烦
+    // 这里的实现参考了https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf 的最终实现版本
+    // 但是，根据论文的说法，
+    // 只用信号量实现条件变量可以得到正确语义的结果，但是性能不行（两次切换开销对于核心态够大了）
 
-    // 这里用信号量来实现互斥，保证这一段的原子性（注释要求lock-sleep一整段是原子操作）
-    // 选择主动维护队列，因为这里如果只使用信号量实现，那么还要维护等待计数
-    // 而等待计数还需要额外的保护，这会造成额外的上下文切换
-    // 根据 https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf 的说法
-    // 只用信号量实现条件变量可以得到正确语义的结果，但是性能不行
+    // 网络上广为流传的版本存在着许多漏洞，例如
+    // 1. 等待计数出现竞争条件
+    // 包括助教提供的版本也存在这个问题，其信号量只保护了Wait部分的等待计数互斥
+    // 如果在锁被释放后出现Signal和Broadcast的调用，将出现语义错误
+    //
+    // 2. 下方标注 论文中提到的1处的区域有很多问题
+    // 论文中的举例：
+    // 假设7个线程都调用了Condition::Wait()在1处挂起（1处已经释放锁，所以这是可能的）
+    // 那么假定此时有一个线程调用了Condition::Broadcast()，那么将调用semWaiters->V()7次，使得semWaiters.Count == 7
+    // 如果此时7个线程继续，一切都好. 但是，如果此时又有一个线程调用了Condition::Wait()
+    // 那么那个线程会导致semWaiters.Count -= 1，并跳过Wait
+    // 剩余7个线程中会有一个被加入semWaiters的等待队列
+    // 这违背了条件变量的语义
+    // 注意Condition::Signal存在相同的问题
+    // 再加一个锁不是不行，但是实现进一步复杂化，影响性能，还有潜在死锁的风险
 
-    mutex->P();
+    // 等待计数：
+    // 用来保证语义的正确，防止Condition::Signal()在无线程阻塞在Condition::Wait()的时候调用，
+    // 出现 semWaiters.Count == 1，导致下一个Condition::Wait()的调用者直接跳过的问题
+
+    // 引入等待计数后，它需要保护，故引入semCount
+    semWaitersCountMutex->P();
+    waitersCount++;
+    semWaitersCountMutex->V();
+
     conditionLock->Release();
-    queue->Append((void*) currentThread);
-    currentThread->Sleep();
-    mutex->V();
+    /* 论文中提到的1处，这是一个关键点，许多语义错误在这里产生，为了保证语义正确加入semSignallerBlock */
+    semWaiters->P();
+    semSignallerBlock->V();
 
     conditionLock->Acquire();
 }
 void Condition::Signal(Lock* conditionLock)
 {
     ASSERT(conditionLock->isHeldByCurrentThread());
-    Thread* t = (Thread*) queue->Remove();
-    if(t != NULL)
+    semWaitersCountMutex->P();
+    if(waitersCount > 0)
     {
-        scheduler->ReadyToRun(t);
+        waitersCount--;
+        semWaiters->V();
+        semSignallerBlock->P();
     }
+    semWaitersCountMutex->V();
 }
 void Condition::Broadcast(Lock* conditionLock)
 {
     ASSERT(conditionLock->isHeldByCurrentThread());
-    Thread* t;
-    while ((t = (Thread*) queue->Remove()) != NULL)
+    semWaitersCountMutex->P();
+    for(int i = 0; i < waitersCount; i++)
     {
-        scheduler->ReadyToRun(t);
+        semWaiters->V();
     }
+    while (waitersCount > 0)
+    {
+        waitersCount--;
+        semSignallerBlock->P();
+    }
+    semWaitersCountMutex->V();
 }

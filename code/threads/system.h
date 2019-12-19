@@ -15,6 +15,7 @@
 #include "interrupt.h"
 #include "stats.h"
 #include "timer.h"
+#include "Alarm.h"
 
 // Initialization and cleanup routines
 extern void Initialize(int argc, char **argv); 	// Initialization,
@@ -28,10 +29,16 @@ extern Scheduler *scheduler;			// the ready list
 extern Interrupt *interrupt;			// interrupt status
 extern Statistics *stats;			// performance metrics
 extern Timer *timer;				// the hardware alarm clock
+extern Alarm *alarmer;
 
 #ifdef USER_PROGRAM
 #include "machine.h"
+#include "memorymanager.h"
+#include "swapLRU.h"
 extern Machine* machine;	// user program memory and registers
+extern MemoryManager* memoryManager;
+extern SwapLRU* swapLRU;
+extern int currentProcessID;
 #endif
 
 #ifdef FILESYS_NEEDED 		// FILESYS or FILESYS_STUB 

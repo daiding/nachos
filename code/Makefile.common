@@ -41,7 +41,7 @@ PROGRAM = nachos
 THREAD_H =../threads/copyright.h\
 	../threads/list.h\
 	../threads/scheduler.h\
-	../threads/synch.h \
+	../threads/synch-sleep.h\
 	../threads/synchlist.h\
 	../threads/system.h\
 	../threads/thread.h\
@@ -51,15 +51,17 @@ THREAD_H =../threads/copyright.h\
 	../threads/BoundedBuffer.h\
 	../threads/table-driver.h\
 	../threads/BoundedBuffer-driver.h\
+	../threads/Alarm.h \
+	../threads/EventBarrier.h \
+	../threads/Elevator.h \
 	../machine/interrupt.h\
 	../machine/sysdep.h\
 	../machine/stats.h\
 	../machine/timer.h
-
 THREAD_C =../threads/main.cc\
 	../threads/list.cc\
 	../threads/scheduler.cc\
-	../threads/synch.cc \
+	../threads/synch.cc\
 	../threads/synchlist.cc\
 	../threads/system.cc\
 	../threads/thread.cc\
@@ -71,41 +73,52 @@ THREAD_C =../threads/main.cc\
 	../threads/BoundedBuffer.cc\
 	../threads/table-driver.cc\
 	../threads/BoundedBuffer-driver.cc\
+	../threads/Alarm.cc\
+	../threads/EventBarrier.cc \
+	../threads/Elevator.cc\
 	../machine/interrupt.cc\
 	../machine/sysdep.cc\
 	../machine/stats.cc\
 	../machine/timer.cc
 
-THREAD_S = ../threads/switch.s
+THREAD_S = ../threads/switch.s\
+
 
 THREAD_O =main.o list.o scheduler.o synch.o synchlist.o system.o thread.o \
 	utility.o threadtest.o interrupt.o stats.o sysdep.o timer.o dllist.o dllist-driver.o table.o BoundedBuffer.o \
-	table-driver.o BoundedBuffer-driver.o
+	table-driver.o BoundedBuffer-driver.o Alarm.o EventBarrier.o Elevator.o
 
 USERPROG_H = ../userprog/addrspace.h\
+	../userprog/physicalmemorymanager.h\
 	../userprog/bitmap.h\
-	../filesys/filesys.h\
-	../filesys/openfile.h\
 	../machine/console.h\
 	../machine/machine.h\
 	../machine/mipssim.h\
-	../machine/translate.h
-
+	../machine/translate.h\
+	../userprog/memorymanager.h\
+	../userprog/swapmanager.h\
+	../userprog/swapLRU.h\
+	../filesys/filesys.h\
+	../filesys/openfile.h
 USERPROG_C = ../userprog/addrspace.cc\
 	../userprog/bitmap.cc\
 	../userprog/exception.cc\
 	../userprog/progtest.cc\
+	../userprog/physicalmemorymanager.cc\
 	../machine/console.cc\
 	../machine/machine.cc\
 	../machine/mipssim.cc\
-	../machine/translate.cc
-
+	../machine/translate.cc\
+	../userprog/memorymanager.cc\
+	../userprog/swapmanager.cc\
+	../userprog/swapLRU.cc
 USERPROG_O = addrspace.o bitmap.o exception.o progtest.o console.o machine.o \
-	mipssim.o translate.o
+	mipssim.o translate.o physicalmemorymanager.o\
+	memorymanager.o swapmanager.o swapLRU.o
 
-VM_H = 
-VM_C = 
-VM_O = 
+VM_H =
+VM_C =
+VM_O =
 
 FILESYS_H =../filesys/directory.h \
 	../filesys/filehdr.h\
@@ -113,6 +126,7 @@ FILESYS_H =../filesys/directory.h \
 	../filesys/openfile.h\
 	../filesys/synchdisk.h\
 	../machine/disk.h
+
 FILESYS_C =../filesys/directory.cc\
 	../filesys/filehdr.cc\
 	../filesys/filesys.cc\
@@ -120,6 +134,7 @@ FILESYS_C =../filesys/directory.cc\
 	../filesys/openfile.cc\
 	../filesys/synchdisk.cc\
 	../machine/disk.cc
+
 FILESYS_O =directory.o filehdr.o filesys.o fstest.o openfile.o synchdisk.o\
 	disk.o
 

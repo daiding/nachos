@@ -142,9 +142,10 @@ public:
 
 private:
     char* name;
-    List* queue;
-    Semaphore* mutex;
-
+    Semaphore* semSignallerBlock; // 原文的h，用来保证Wait释放锁但还未进入等待时，被Signal/Broadcast打断，导致语义错误的问题
+    Semaphore* semWaiters; // 原文的s，用来让线程进入等待队列阻塞
+    Semaphore* semWaitersCountMutex; // 原文的x，用来保护waitersCount的修改的互斥性
+    int waitersCount;
     // plus some other stuff you'll need to define
 };
 #endif // SYNCH_H

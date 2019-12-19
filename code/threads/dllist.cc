@@ -104,7 +104,7 @@ void DLList::SortedInsert(void* item, int sortKey)
         for (; p != NULL && sortKey >= p->key; p = p->next)
             ;
         ThreadSwitchErrnum(4);
-        ThreadSwitchErrnum(5);
+//        ThreadSwitchErrnum(5);
         // ... - p->prev - *temp* - p - p->next - ...
         // in - p -
         DLLElement* temp = new DLLElement(item, sortKey);
@@ -215,7 +215,7 @@ SynchDLList::~SynchDLList()
 void SynchDLList::Prepend(void *item)
 {
     lock->Acquire();
-    list->Append(item);
+    list->Prepend(item);
     listEmpty->Signal(lock);
     lock->Release();
 }
@@ -266,11 +266,13 @@ void* SynchDLList::SortedRemove(int sortKey)
     return item;
 }
 
+//! 测试专用 自行 LockSelf 上锁
 const DLLElement* SynchDLList::First() const
 {
     return list->First();
 }
 
+//! 测试专用 自行 LockSelf 上锁
 const DLLElement* SynchDLList::Last() const
 {
     return list->Last();

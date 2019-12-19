@@ -98,7 +98,12 @@ Machine::ReadMem(int addr, int size, int *value)
     DEBUG('a', "Reading VA 0x%x, size %d\n", addr, size);
 
     exception = Translate(addr, &physicalAddress, size, FALSE);
-    if (exception != NoException) {
+    if (exception == PageFaultException)
+    {
+        machine->RaiseException(exception, addr);
+        exception = Translate(addr, &physicalAddress, size, TRUE);
+    }
+    if (exception != NoException && exception != PageFaultException) {
         machine->RaiseException(exception, addr);
         return FALSE;
     }
@@ -148,7 +153,12 @@ Machine::WriteMem(int addr, int size, int value)
     DEBUG('a', "Writing VA 0x%x, size %d, value 0x%x\n", addr, size, value);
 
     exception = Translate(addr, &physicalAddress, size, TRUE);
-    if (exception != NoException) {
+    if (exception == PageFaultException)
+    {
+        machine->RaiseException(exception, addr);
+        exception = Translate(addr, &physicalAddress, size, TRUE);
+    }
+    if (exception != NoException && exception != PageFaultException) {
         machine->RaiseException(exception, addr);
         return FALSE;
     }
@@ -206,8 +216,8 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     }
 
     // we must have either a TLB or a page table, but not both!
-    ASSERT(tlb == NULL || pageTable == NULL);
-    ASSERT(tlb != NULL || pageTable != NULL);
+    ASSERT(tlb == NULL || visualPageTable == NULL);
+    ASSERT(tlb != NULL || visualPageTable != NULL);
 
 // calculate the virtual page number, and offset within the page,
 // from the virtual address
@@ -215,16 +225,16 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     offset = (unsigned) virtAddr % PageSize;
 
     if (tlb == NULL) {		// => page table => vpn is index into table
-        if (vpn >= pageTableSize) {
+        if (vpn >= visualPageTableSize) {
             DEBUG('a', "virtual page # %d too large for page table size %d!\n",
-                  virtAddr, pageTableSize);
+                  virtAddr, visualPageTableSize);
             return AddressErrorException;
-        } else if (!pageTable[vpn].valid) {
+        } else if (!visualPageTable[vpn].valid) {
             DEBUG('a', "virtual page # %d too large for page table size %d!\n",
-                  virtAddr, pageTableSize);
+                  virtAddr, visualPageTableSize);
             return PageFaultException;
         }
-        entry = &pageTable[vpn];
+        entry = &visualPageTable[vpn];
     } else {
         for (entry = NULL, i = 0; i < TLBSize; i++)
             if (tlb[i].valid && ((unsigned int) tlb[i].virtualPage == vpn)) {

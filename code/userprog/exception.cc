@@ -24,6 +24,7 @@
 #include "copyright.h"
 #include "system.h"
 #include "syscall.h"
+#include "machine.h"
 
 //----------------------------------------------------------------------
 // ExceptionHandler
@@ -47,17 +48,40 @@
 //	"which" is the kind of exception.  The list of possible exceptions
 //	are in machine.h.
 //----------------------------------------------------------------------
+static void ExceptionPageFaultHandler();
 
 void
 ExceptionHandler(ExceptionType which)
 {
     int type = machine->ReadRegister(2);
+    switch (which)
+	{
+		case SyscallException:
+			switch (type)
+			{
+				case SC_Halt:
+					printf("this machine halt!!\n");
+					interrupt->Halt();
+					break;
+				default:
+					printf("Unexpected system call type !\n");
+					break;
+			}
+			break;
+		case PageFaultException:
+			ExceptionPageFaultHandler();
+			break;
+		default:
+			printf("Unexpected user mode exception %d %d\n", which, type);
+			break;
+	}
+}
 
-    if ((which == SyscallException) && (type == SC_Halt)) {
-        DEBUG('a', "Shutdown, initiated by user program.\n");
-        interrupt->Halt();
-    } else {
-        printf("Unexpected user mode exception %d %d\n", which, type);
-        ASSERT(FALSE);
-    }
+static void ExceptionPageFaultHandler()
+{
+    int badVisualAddr = machine->ReadRegister(39);
+    int badVisualPageNO = badVisualAddr / PageSize;
+	printf("PAGE FAULT START PROCESSING\n");
+    memoryManager->ProcessPageFault(badVisualPageNO);
+    return;
 }

@@ -51,7 +51,7 @@ public:
 // 继承了NonCopyable的原因：Nachos的内存分配器很诡异，非POD对象成员变量放栈上似乎会报一些莫名其妙的运行时错误，加上PDF没有定义拷贝赋值函数之类的，干脆把它禁了好了
 class DLList : NonCopyable {
 public:
-    enum {DEFAULT_MIN_KEY = 0}; // Old version of G++ is shit
+    enum {DEFAULT_MIN_KEY = 0}; // Old version of G++ cannot compile `static const int CONST = 0;`
     DLList(); // initialize the list
     ~DLList(); // de-allocate the list
     void Prepend(void* item);  // add to head of list (set key = min_key-1)
@@ -80,15 +80,10 @@ private:
 
 class SynchDLList : NonCopyable {
 public:
-    enum {DEFAULT_MIN_KEY = 0}; // Old version of G++ is shit
+    enum {DEFAULT_MIN_KEY = 0}; // Old version of G++ cannot compile `static const int CONST = 0;`
     SynchDLList(); // initialize the list
     ~SynchDLList(); // de-allocate the list
-    void LockSelf() {
-        lock->Acquire();
-    }
-    void UnlockSelf() {
-        lock->Release();
-    }
+
     void Prepend(void* item);  // add to head of list (set key = min_key-1)
     void Append(void* item);   // add to tail of list (set key = max_key+1)
     CHECK_RESULT void* Remove(int* keyPtr); // remove from head of list
@@ -100,9 +95,16 @@ public:
     void SortedInsert(void* item, int sortKey);
     CHECK_RESULT void* SortedRemove(int sortKey); // remove first item with key==sortKey
     // return NULL if no such item exists
+
+    // 测试专用
+    void LockSelf() {
+        lock->Acquire();
+    }
+    void UnlockSelf() {
+        lock->Release();
+    }
     const DLLElement* First() const;
     const DLLElement* Last() const;
-
     int Size() const;
 
 private:

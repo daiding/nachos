@@ -420,7 +420,7 @@ Delay(int seconds)
 // Abort
 // 	Quit and drop core.
 //----------------------------------------------------------------------
-
+__attribute__((noreturn))
 void
 Abort()
 {
@@ -431,7 +431,7 @@ Abort()
 // Exit
 // 	Quit without dropping core.
 //----------------------------------------------------------------------
-
+__attribute__((noreturn))
 void
 Exit(int exitCode)
 {

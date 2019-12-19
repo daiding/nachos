@@ -62,7 +62,7 @@ extern void DebugInit(char* flags);	// enable printing debug messages
 
 extern bool DebugIsEnabled(char flag); 	// Is this debug flag enabled?
 
-extern void DEBUG (char flag, char* format, ...);  	// Print debug message
+extern void DEBUG (char flag, const char* format, ...);  	// Print debug message
 // if flag is enabled
 
 //----------------------------------------------------------------------

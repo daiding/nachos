@@ -326,7 +326,7 @@ Interrupt::CheckIfDue(bool advanceClock)
 
 // Check if there is nothing more to do, and if so, quit
     if ((status == IdleMode) && (toOccur->type == TimerInt)
-            && pending->IsEmpty()) {
+            && pending->IsEmpty() && alarmer->GetWaiterCount() == 0) {
         pending->SortedInsert(toOccur, when);
         return FALSE;
     }

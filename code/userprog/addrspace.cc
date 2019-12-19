@@ -60,11 +60,11 @@ SwapHeader (NoffHeader *noffH)
 //	"executable" is the file containing the object code to load into memory
 //----------------------------------------------------------------------
 
-AddrSpace::AddrSpace(OpenFile *executable)
+AddrSpace::AddrSpace(OpenFile *executable, int pid)
 {
     NoffHeader noffH;
     unsigned int i, size;
-
+    processID = pid;
     executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
     if ((noffH.noffMagic != NOFFMAGIC) &&
             (WordToHost(noffH.noffMagic) == NOFFMAGIC))
@@ -78,43 +78,37 @@ AddrSpace::AddrSpace(OpenFile *executable)
     numPages = divRoundUp(size, PageSize);
     size = numPages * PageSize;
 
-    ASSERT(numPages <= NumPhysPages);		// check we're not trying
-    // to run anything too big --
-    // at least until we have
-    // virtual memory
-
     DEBUG('a', "Initializing address space, num pages %d, size %d\n",
           numPages, size);
 // first, set up the translation
-    pageTable = new TranslationEntry[numPages];
+    visualPageTable = new TranslationEntry[numPages];
+    char buffer[PageSize];
     for (i = 0; i < numPages; i++) {
-        pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
-        pageTable[i].physicalPage = i;
-        pageTable[i].valid = TRUE;
-        pageTable[i].use = FALSE;
-        pageTable[i].dirty = FALSE;
-        pageTable[i].readOnly = FALSE;  // if the code segment was entirely on
+        visualPageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
+        visualPageTable[i].physicalPage = -1;
+        if (i < numPages - 1)
+        {
+            executable->ReadAt(buffer, PageSize, i * PageSize + sizeof(noffH));
+            visualPageTable[i].swapPage = memoryManager->InitializeSwapPage(buffer, PageSize);
+        }
+        else
+        {
+            executable->ReadAt(buffer, size % PageSize, i * PageSize + sizeof(noffH));
+            visualPageTable[i].swapPage = memoryManager->InitializeSwapPage(buffer, size % PageSize);
+        }
+        
+        visualPageTable[i].valid = FALSE;
+        visualPageTable[i].use = FALSE;
+        visualPageTable[i].dirty = FALSE;
+        visualPageTable[i].readOnly = FALSE;  // if the code segment was entirely on
         // a separate page, we could set its
         // pages to be read-only
     }
 
 // zero out the entire address space, to zero the unitialized data segment
 // and the stack segment
-    bzero(machine->mainMemory, size);
 
 // then, copy in the code and data segments into memory
-    if (noffH.code.size > 0) {
-        DEBUG('a', "Initializing code segment, at 0x%x, size %d\n",
-              noffH.code.virtualAddr, noffH.code.size);
-        executable->ReadAt(&(machine->mainMemory[noffH.code.virtualAddr]),
-                           noffH.code.size, noffH.code.inFileAddr);
-    }
-    if (noffH.initData.size > 0) {
-        DEBUG('a', "Initializing data segment, at 0x%x, size %d\n",
-              noffH.initData.virtualAddr, noffH.initData.size);
-        executable->ReadAt(&(machine->mainMemory[noffH.initData.virtualAddr]),
-                           noffH.initData.size, noffH.initData.inFileAddr);
-    }
 
 }
 
@@ -125,7 +119,7 @@ AddrSpace::AddrSpace(OpenFile *executable)
 
 AddrSpace::~AddrSpace()
 {
-    delete [] pageTable;
+    delete [] visualPageTable;
 }
 
 //----------------------------------------------------------------------
@@ -181,6 +175,16 @@ void AddrSpace::SaveState()
 
 void AddrSpace::RestoreState()
 {
-    machine->pageTable = pageTable;
-    machine->pageTableSize = numPages;
+    machine->visualPageTable = visualPageTable;
+    machine->visualPageTableSize = numPages;
+}
+
+TranslationEntry* AddrSpace::GetPageTable()
+{
+    return visualPageTable;
+}
+
+int AddrSpace::GetProcessID()
+{
+    return processID;
 }

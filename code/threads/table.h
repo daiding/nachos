@@ -29,7 +29,6 @@ files, etc.
 #include "synch-sleep.h"
 
 
-
 class Table {
 public:
     // create a table to hold at most 'size' entries.
@@ -47,6 +46,9 @@ public:
 
     // free a table slot
     void Release(int index);
+
+    int Size();
+
 private:
     Lock* tableLock;
     int tableSize;

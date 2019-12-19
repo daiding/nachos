@@ -7,17 +7,19 @@
 
 #include "copyright.h"
 #include "system.h"
-
+#include "translate.h"
 // This defines *all* of the global data structures used by Nachos.
 // These are all initialized and de-allocated by this file.
 
 Thread *currentThread;			// the thread we are running now
 Thread *threadToBeDestroyed;  		// the thread that just finished
+
 Scheduler *scheduler;			// the ready list
 Interrupt *interrupt;			// interrupt status
 Statistics *stats;			// performance metrics
 Timer *timer;				// the hardware timer device,
 // for invoking context switches
+Alarm *alarmer;
 
 #ifdef FILESYS_NEEDED
 FileSystem  *fileSystem;
@@ -27,8 +29,11 @@ FileSystem  *fileSystem;
 SynchDisk   *synchDisk;
 #endif
 
-#ifdef USER_PROGRAM	// requires either FILESYS or FILESYS_STUB
-Machine *machine;	// user program memory and registers
+#ifdef USER_PROGRAM
+Machine* machine;
+MemoryManager* memoryManager;
+SwapLRU* swapLRU;
+int currentProcessID;
 #endif
 
 #ifdef NETWORK
@@ -62,6 +67,7 @@ TimerInterruptHandler(int dummy)
 {
     if (interrupt->getStatus() != IdleMode)
         interrupt->YieldOnReturn();
+    alarmer->AwakeTimeoutThreads();
 }
 
 //----------------------------------------------------------------------
@@ -102,12 +108,19 @@ Initialize(int argc, char **argv)
                 argCount = 2;
             }
         } else if (!strcmp(*argv, "-rs")) {
+            if(argc <= 1)
+            {
+                fprintf(stderr, "Error : Expected random seed after option -rs, didn't you forget again?\n"
+                        "Usage : nachos <other options> -rs 1234 <other options>\n");
+                Exit(1);
+            }
             ASSERT(argc > 1);
             RandomInit(atoi(*(argv + 1)));	// initialize pseudo-random
             // number generator
             randomYield = TRUE;
             argCount = 2;
         }
+
 #ifdef USER_PROGRAM
         if (!strcmp(*argv, "-s"))
             debugUserProg = TRUE;
@@ -133,8 +146,17 @@ Initialize(int argc, char **argv)
     stats = new Statistics();			// collect statistics
     interrupt = new Interrupt;			// start up interrupt handling
     scheduler = new Scheduler();		// initialize the ready queue
+
     if (randomYield)				// start the timer (if needed)
+    {
         timer = new Timer(TimerInterruptHandler, 0, randomYield);
+        alarmer = new Alarm();
+    }
+    else
+    {
+        timer = new Timer(TimerInterruptHandler, 0, FALSE);
+        alarmer = new Alarm();
+    }
 
     threadToBeDestroyed = NULL;
 
@@ -142,6 +164,7 @@ Initialize(int argc, char **argv)
     // But if it ever tries to give up the CPU, we better have a Thread
     // object to save its state.
     currentThread = new Thread("main");
+
     currentThread->setStatus(RUNNING);
 
     interrupt->Enable();
@@ -149,6 +172,8 @@ Initialize(int argc, char **argv)
 
 #ifdef USER_PROGRAM
     machine = new Machine(debugUserProg);	// this must come first
+    memoryManager = new MemoryManager();
+    swapLRU = new SwapLRU(32);
 #endif
 
 #ifdef FILESYS

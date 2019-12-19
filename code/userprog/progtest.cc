@@ -30,14 +30,13 @@ StartProcess(char *filename)
         printf("Unable to open file %s\n", filename);
         return;
     }
-    space = new AddrSpace(executable);
+    space = memoryManager->CreateAddrSpace(executable);
     currentThread->space = space;
-
-    delete executable;			// close file
-
+    delete executable; //close file
+    currentProcessID = space->GetProcessID(); 
     space->InitRegisters();		// set the initial register values
     space->RestoreState();		// load page table register
-
+    
     machine->Run();			// jump to the user progam
     ASSERT(FALSE);			// machine->Run never returns;
     // the address space exits

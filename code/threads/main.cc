@@ -52,12 +52,16 @@
 
 #include "utility.h"
 #include "system.h"
+#include <cstdarg>
 
 #ifdef THREADS
 extern int testnum;
 extern int threadnum;
 extern int nodenum;
 extern int errornum;
+extern int elevatorNum;
+extern int riderNum;
+extern int floorsNum;
 extern bool syncThreadMutexEnabled;
 extern bool watcherThreadEnabled;
 #endif
@@ -68,6 +72,16 @@ extern void ThreadTest(void), Copy(char *unixFile, char *nachosFile);
 extern void Print(char *file), PerformanceTest(void);
 extern void StartProcess(char *file), ConsoleTest(char *in, char *out);
 extern void MailTest(int networkID);
+
+__attribute__((noreturn)) void OnErrorCleanupAndExit(const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+    currentThread->Finish();
+    Exit(1);
+}
 
 //----------------------------------------------------------------------
 // main
@@ -83,103 +97,149 @@ extern void MailTest(int networkID);
 //		ex: "nachos -d +" -> argv = {"nachos", "-d", "+"}
 //----------------------------------------------------------------------
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
-    int argCount;			// the number of arguments
+    int argCount; // the number of arguments
     // for a particular command
 
     DEBUG('t', "Entering main");
-    (void) Initialize(argc, argv);
+    (void)Initialize(argc, argv);
 
 #ifdef THREADS
-    if(argc < 5)
+    if (argc < 3)
     {
-        fprintf(stderr, "Too few arguments\n"
-                "Usage : %s <test num> <thread num> <node num> <error num> <other optional options> \n", argv[0]);
+        OnErrorCleanupAndExit("Too few arguments\n"
+                              "Usage : %s <test num> <thread num> <node num> <error num> <other optional options> \n",
+                              argv[0]);
+    }
+    testnum = atoi(argv[1]);
+    if (testnum == 7)
+    {
+
+        // elevator are special
+        if(argc < 5)
+        {
+            OnErrorCleanupAndExit("Too few arguments\n"
+                                  "Usage : %s 7 <elevator num> <rider num> <floor num> <other optional options>\n", 
+                                  argv[0]);
+        }
+        elevatorNum = atoi(argv[2]);
+        riderNum = atoi(argv[3]);
+        floorsNum = atoi(argv[4]);
+        if(elevatorNum <= 0 || riderNum <= 0 || floorsNum <= 0)
+        {
+            OnErrorCleanupAndExit("Arguments invalid or zero num\n"
+                                  "Usage : %s 7 <elevator num> <rider num> <floor num> <other optional options>\n",
+                                  argv[0]); 
+        }
     }
     else
     {
-        testnum = atoi(argv[1]);
+        // test 1 - 6
         threadnum = atoi(argv[2]);
-        nodenum = atoi(argv[3]);
-        errornum = atoi(argv[4]);
-
-        for (argc--, argv++; argc > 0; argc -= argCount, argv += argCount) {
-            argCount = 1;
-            if (!strcmp(*argv, "-M"))
-            {
-                syncThreadMutexEnabled = true;
-                printf("** Enable mutex for SyncInsertRemoveThread\n");
-            }
-            else if (!strcmp(*argv, "-W"))
-            {
-                watcherThreadEnabled = true;
-                printf("** Enable watcher\n");
-            }
-            else if (!strcmp(*argv, "-z")) {              // print copyright
-                printf("%s\n", copyright);
-            }
-        }
-
-        if(testnum <= 0 || threadnum <= 0 || nodenum <= 0 || errornum <= 0)
+        if (testnum <= 4)
         {
-            fprintf(stderr, "Arguments invalid or zero num\n"
-                    "Usage : %s <test num> <thread num> <node num> <error num> <other optional options>\n", argv[0]);
+            if (argc < 5)
+            {
+                OnErrorCleanupAndExit("Too few arguments: Missing <node num> and <error num>\n"
+                                      "Usage : %s <test num> <thread num> <node num> <error num> <other optional options> \n",
+                                      argv[0]);
+            }
+            nodenum = atoi(argv[3]);
+            errornum = atoi(argv[4]);
         }
-        else
+        if (testnum <= 0 || threadnum <= 0 || (testnum <= 4 && (nodenum <= 0 || errornum <= 0)))
         {
-            ThreadTest();
+            OnErrorCleanupAndExit("Arguments invalid or zero num\n"
+                                  "Usage : %s <test num> <thread num> <node num> <error num> <other optional options>\n",
+                                  argv[0]);
         }
     }
-#else
-    for (argc--, argv++; argc > 0; argc -= argCount, argv += argCount) {
+    for (argc--, argv++; argc > 0; argc -= argCount, argv += argCount)
+    {
         argCount = 1;
-        if (!strcmp(*argv, "-z"))               // print copyright
+        if (!strcmp(*argv, "-M"))
+        {
+            syncThreadMutexEnabled = true;
+            printf("** Enable mutex for SyncInsertRemoveThread\n");
+        }
+        else if (!strcmp(*argv, "-W"))
+        {
+            watcherThreadEnabled = true;
+            printf("** Enable watcher\n");
+        }
+        else if (!strcmp(*argv, "-z"))
+        { // print copyright
+            printf("%s\n", copyright);
+        }
+    }
+
+    ThreadTest();
+#else
+    for (argc--, argv++; argc > 0; argc -= argCount, argv += argCount)
+    {
+        argCount = 1;
+        if (!strcmp(*argv, "-z")) // print copyright
             printf("%s", copyright);
 #ifdef USER_PROGRAM
-        if (!strcmp(*argv, "-x")) {        	// run a user program
+        if (!strcmp(*argv, "-x"))
+        { // run a user program
             ASSERT(argc > 1);
             StartProcess(*(argv + 1));
             argCount = 2;
-        } else if (!strcmp(*argv, "-c")) {      // test the console
+        }
+        else if (!strcmp(*argv, "-c"))
+        { // test the console
             if (argc == 1)
                 ConsoleTest(NULL, NULL);
-            else {
+            else
+            {
                 ASSERT(argc > 2);
                 ConsoleTest(*(argv + 1), *(argv + 2));
                 argCount = 3;
             }
-            interrupt->Halt();		// once we start the console, then
+            interrupt->Halt(); // once we start the console, then
             // Nachos will loop forever waiting
             // for console input
         }
 #endif // USER_PROGRAM
 #ifdef FILESYS
-        if (!strcmp(*argv, "-cp")) { 		// copy from UNIX to Nachos
+        if (!strcmp(*argv, "-cp"))
+        { // copy from UNIX to Nachos
             ASSERT(argc > 2);
             Copy(*(argv + 1), *(argv + 2));
             argCount = 3;
-        } else if (!strcmp(*argv, "-p")) {	// print a Nachos file
+        }
+        else if (!strcmp(*argv, "-p"))
+        { // print a Nachos file
             ASSERT(argc > 1);
             Print(*(argv + 1));
             argCount = 2;
-        } else if (!strcmp(*argv, "-r")) {	// remove Nachos file
+        }
+        else if (!strcmp(*argv, "-r"))
+        { // remove Nachos file
             ASSERT(argc > 1);
             fileSystem->Remove(*(argv + 1));
             argCount = 2;
-        } else if (!strcmp(*argv, "-l")) {	// list Nachos directory
+        }
+        else if (!strcmp(*argv, "-l"))
+        { // list Nachos directory
             fileSystem->List();
-        } else if (!strcmp(*argv, "-D")) {	// print entire filesystem
+        }
+        else if (!strcmp(*argv, "-D"))
+        { // print entire filesystem
             fileSystem->Print();
-        } else if (!strcmp(*argv, "-t")) {	// performance test
+        }
+        else if (!strcmp(*argv, "-t"))
+        { // performance test
             PerformanceTest();
         }
 #endif // FILESYS
 #ifdef NETWORK
-        if (!strcmp(*argv, "-o")) {
+        if (!strcmp(*argv, "-o"))
+        {
             ASSERT(argc > 1);
-            Delay(2); 				// delay for 2 seconds
+            Delay(2); // delay for 2 seconds
             // to give the user time to
             // start up another nachos
             MailTest(atoi(*(argv + 1)));
@@ -198,5 +258,5 @@ main(int argc, char **argv)
     // it from returning.
     currentThread->Finish();
 
-    return(0);			// Not reached...
+    return (0); // Not reached...
 }
