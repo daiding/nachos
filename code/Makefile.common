@@ -98,6 +98,7 @@ USERPROG_H = ../userprog/addrspace.h\
 	../userprog/memorymanager.h\
 	../userprog/swapmanager.h\
 	../userprog/swapLRU.h\
+	../userprog/processmanager.h\
 	../filesys/filesys.h\
 	../filesys/openfile.h
 USERPROG_C = ../userprog/addrspace.cc\
@@ -105,6 +106,7 @@ USERPROG_C = ../userprog/addrspace.cc\
 	../userprog/exception.cc\
 	../userprog/progtest.cc\
 	../userprog/physicalmemorymanager.cc\
+	../userprog/processmanager.cc\
 	../machine/console.cc\
 	../machine/machine.cc\
 	../machine/mipssim.cc\
@@ -114,7 +116,7 @@ USERPROG_C = ../userprog/addrspace.cc\
 	../userprog/swapLRU.cc
 USERPROG_O = addrspace.o bitmap.o exception.o progtest.o console.o machine.o \
 	mipssim.o translate.o physicalmemorymanager.o\
-	memorymanager.o swapmanager.o swapLRU.o
+	memorymanager.o swapmanager.o swapLRU.o processmanager.o
 
 VM_H =
 VM_C =

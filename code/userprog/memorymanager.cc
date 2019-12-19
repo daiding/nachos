@@ -23,7 +23,7 @@ int MemoryManager::InitializeSwapPage(char* buffer, int size)
 void MemoryManager::ProcessPageFault(int badVisualPageNO)
 {
     int processID = currentThread->space->GetProcessID();
-    TranslationEntry* pageTable = processmanager->GetPageTable(processID);
+    TranslationEntry* pageTable = processManager->GetPageTable(processID);
     int physicalPageNO = physicalMemoryManager->GetOneAvailablePage();
     while (physicalPageNO == -1)//内存空间已满，需要换出一个实页
     {
