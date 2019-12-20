@@ -25,6 +25,7 @@
 #include "system.h"
 #include "syscall.h"
 #include "machine.h"
+#include "addrspace.h"
 
 //----------------------------------------------------------------------
 // ExceptionHandler
@@ -49,6 +50,8 @@
 //	are in machine.h.
 //----------------------------------------------------------------------
 static void ExceptionPageFaultHandler();
+static void SysCallInitial(int arg);
+static void SysCallExecHandler();
 
 void
 ExceptionHandler(ExceptionType which)
@@ -63,6 +66,9 @@ ExceptionHandler(ExceptionType which)
 					printf("this machine halt!!\n");
 					interrupt->Halt();
 					break;
+				case SC_Exec:
+					SysCallExecHandler();
+					break;
 				default:
 					printf("Unexpected system call type !\n");
 					break;
@@ -75,6 +81,7 @@ ExceptionHandler(ExceptionType which)
 			printf("Unexpected user mode exception %d %d\n", which, type);
 			break;
 	}
+	return;
 }
 
 static void ExceptionPageFaultHandler()
@@ -84,4 +91,49 @@ static void ExceptionPageFaultHandler()
 	printf("PAGE FAULT START PROCESSING\n");
     memoryManager->ProcessPageFault(badVisualPageNO);
     return;
+}
+
+static void SysCallInitial(int arg)
+{
+	switch (arg)
+	{
+		case 0:
+			currentThread->space->RestoreState();
+			currentThread->space->InitRegisters();
+			break;
+		case 1:
+			currentThread->space->RestoreState();
+			break;
+		default:
+			break;
+	}
+	machine->Run();
+	return;
+}
+
+static void SysCallExecHandler()
+{
+	char fileName[50];
+	int i = 0;
+	int fileNameAddress = machine->ReadRegister(4);
+	do
+	{
+		fileName[i] = machine->ReadMem(fileNameAddress+i,1,fileName+i);
+	} while (i < 50&&fileName[i++]!='\0');
+	OpenFile* executableFile = fileSystem->Open(fileName);
+	AddrSpace* processAddrSpace = processManager->CreateAddrSpace(executableFile);
+	Thread* mainThread = new Thread(fileName);
+	if (processAddrSpace != NULL && executableFile != NULL)
+	{
+		Thread* mainThread = new Thread(fileName);
+		mainThread->space = processAddrSpace;
+		machine->WriteRegister(2, processAddrSpace->GetProcessID());
+		mainThread->Fork(SysCallInitial, 0);
+	}
+	else 
+	{
+		machine->WriteRegister(2, -1);
+	}
+	machine->PCForword();
+	return;
 }
