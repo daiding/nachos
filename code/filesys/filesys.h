@@ -54,8 +54,9 @@ public:
     }
 
     OpenFile* Open(char *name) {
+        DEBUG('f',"OPENING FILE %s sucess\n",name);
         int fileDescriptor = OpenForReadWrite(name, FALSE);
-
+        DEBUG('f',"OPEN FILE %s sucess, file Descriptor is %d\n", name, fileDescriptor);
         if (fileDescriptor == -1) return NULL;
         return new OpenFile(fileDescriptor);
     }

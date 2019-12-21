@@ -119,6 +119,7 @@ AddrSpace::AddrSpace(OpenFile *executable, int pid)
 
 AddrSpace::~AddrSpace()
 {
+    memoryManager->ReleaseMemoryPages(visualPageTable, numPages);
     delete [] visualPageTable;
 }
 

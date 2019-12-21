@@ -50,5 +50,15 @@ void MemoryManager::ProcessPageFault(int badVisualPageNO)
     return;
 }
 
+void MemoryManager::ReleaseMemoryPages(TranslationEntry* pageTable, int numPage)
+{
+    for (int i = 0; i < numPage; i++)
+    {
+        swapDiskManager->ReleaseVisualMemoryPage(pageTable[i].swapPage);
+        physicalMemoryManager->ReleasePhysicalPage(pageTable[i].physicalPage);
+    }
+    return;
+}
+
 
 

@@ -17,11 +17,11 @@ class MemoryManager
     int processNum;
     PhysicalMemoryManager* physicalMemoryManager;
     SwapDiskManager* swapDiskManager;
-    int RequestPhysicalMemoryPage();//请求分配一个实页表
     public:
     MemoryManager();
     ~MemoryManager();
     int InitializeSwapPage(char *buffer, int size);
+    void ReleaseMemoryPages(TranslationEntry* pageTable, int pageNO);
     void ProcessPageFault(int badVisualAddrNO);//处理缺页中断
 };
 

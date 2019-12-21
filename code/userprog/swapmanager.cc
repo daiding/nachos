@@ -27,8 +27,20 @@ int SwapDiskManager::InitialVisualMemoryPage(char *data, int dataSize)
     else
     {
         int swapPageNO = swapDiskMap->Find();
-        swapDisk->WriteAt(data,dataSize,swapPageNO * PageSize);
-        return swapPageNO;
+        if (PageSize > dataSize)
+        {
+            char* buffer;
+            buffer = new char[PageSize];
+            bzero(buffer,PageSize);
+            bcopy(data, buffer, dataSize);
+            swapDisk->WriteAt(data,dataSize,swapPageNO * PageSize);
+            return swapPageNO;
+        }
+        else
+        {
+            swapDisk->WriteAt(data,dataSize,swapPageNO * PageSize);
+            return swapPageNO;
+        }
     }
 }
 
@@ -41,6 +53,12 @@ void SwapDiskManager::SwapOut(int physicalPageNO,int swapPageNO)
 void SwapDiskManager::SwapIn(int swapPageNo,int physicalPageNO)
 {
     swapDisk->ReadAt(&(machine->mainMemory[physicalPageNO*PageSize]), PageSize, swapPageNo * PageSize);
+    return;
+}
+
+void SwapDiskManager::ReleaseVisualMemoryPage(int pageNO)
+{
+    swapDiskMap->Clear(pageNO);
     return;
 }
 

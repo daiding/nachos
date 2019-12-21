@@ -52,6 +52,7 @@
 static void ExceptionPageFaultHandler();
 static void SysCallInitial(int arg);
 static void SysCallExecHandler();
+static void SysCallExitHandler();
 
 void
 ExceptionHandler(ExceptionType which)
@@ -66,11 +67,17 @@ ExceptionHandler(ExceptionType which)
 					printf("this machine halt!!\n");
 					interrupt->Halt();
 					break;
+				case SC_Exit:
+					printf("process call exit()\n");
+					currentThread->Finish();
+					break;
 				case SC_Exec:
+					printf("process call exec\n");
 					SysCallExecHandler();
 					break;
 				default:
-					printf("Unexpected system call type !\n");
+					printf("Unexpected system call type %d!\n", type);
+					interrupt->Halt();
 					break;
 			}
 			break;
@@ -118,11 +125,11 @@ static void SysCallExecHandler()
 	int fileNameAddress = machine->ReadRegister(4);
 	do
 	{
-		fileName[i] = machine->ReadMem(fileNameAddress+i,1,fileName+i);
-	} while (i < 50&&fileName[i++]!='\0');
+		machine->ReadMem(fileNameAddress+i,1,(int*)(fileName+i));
+	} while (i < 50 && fileName[i++]!='\0');
+	printf("exec %s\n",fileName);
 	OpenFile* executableFile = fileSystem->Open(fileName);
 	AddrSpace* processAddrSpace = processManager->CreateAddrSpace(executableFile);
-	Thread* mainThread = new Thread(fileName);
 	if (processAddrSpace != NULL && executableFile != NULL)
 	{
 		Thread* mainThread = new Thread(fileName);
@@ -134,6 +141,17 @@ static void SysCallExecHandler()
 	{
 		machine->WriteRegister(2, -1);
 	}
-	machine->PCForword();
+	printf("exec %s\n", fileName);
+	int cur_PC = machine->ReadRegister(PCReg);
+	machine->WriteRegister(PrevPCReg, cur_PC);//通过修改寄存器，使cpu运行下一条指令
+	machine->WriteRegister(PCReg, cur_PC + sizeof(int));
+	machine->WriteRegister(NextPCReg, cur_PC + 2 * sizeof(int));
+	return;
+}
+
+static void SysCallExitHandler()
+{
+	currentThread->Finish();
+	processManager->ReleaseProcess();
 	return;
 }
