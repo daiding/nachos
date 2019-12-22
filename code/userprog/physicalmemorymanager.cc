@@ -44,6 +44,9 @@ void PhysicalMemoryManager::SetPageInformation(int physicalPageNO, int processID
 
 void PhysicalMemoryManager::ReleasePhysicalPage(int physicalPageNO)
 {
-    physicalMemoryMap->Clear(physicalPageNO);
+    if (physicalPageNO > 0)
+    {
+        physicalMemoryMap->Clear(physicalPageNO);
+    }
     return;
 }

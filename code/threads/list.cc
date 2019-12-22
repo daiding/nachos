@@ -236,3 +236,53 @@ List::SortedRemove(int *keyPtr)
     return thing;
 }
 
+bool List::RemoveElement(void* target)
+{
+    ListElement *curElement = first;
+    ListElement *preElement = NULL;
+    if (first == NULL)
+    {
+        return false;
+    }
+    while (curElement != last)
+    {
+        if (curElement->item == target)
+        {
+            if (preElement == NULL)
+            {
+                first = first->next;
+                delete curElement;
+                return true;
+            }
+            else
+            {
+                preElement->next = curElement->next;
+                delete curElement;
+                return true;
+            }
+        }
+        preElement = curElement;
+        curElement = curElement->next;
+    }
+    if (curElement->item == target)
+    {
+        if (preElement == NULL)
+        {
+                first = first->next;
+                delete curElement;
+                return true;
+        }
+        else
+        {
+            preElement->next = curElement->next;
+            delete curElement;
+            return true;
+        }
+    }
+    else
+    {
+        return false;
+    }
+    
+}
+

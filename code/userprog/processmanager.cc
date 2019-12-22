@@ -1,10 +1,20 @@
 #include "processmanager.h"
 
-
+ProcessControlBlock::ProcessControlBlock(int processID, OpenFile* executableFile)
+{
+    processSpace = new AddrSpace(executableFile, processID);
+    pid = processID;
+    mainThread = NULL;
+}
+ProcessControlBlock::~ProcessControlBlock()
+{
+    DEBUG('a',"destroy the process %d", pid);
+    delete processSpace;
+}
 ProcessManager::ProcessManager(int maxProcessNum)
 {
     processTableMap = new BitMap(maxProcessNum);
-    processTable = new AddrSpace*[maxProcessNum];
+    processTable = new ProcessControlBlock*[maxProcessNum];
 }
 
 ProcessManager::~ProcessManager()
@@ -13,22 +23,22 @@ ProcessManager::~ProcessManager()
     delete [] processTable;
 }
 
-AddrSpace* ProcessManager::CreateAddrSpace(OpenFile* executableFile)
+ProcessControlBlock* ProcessManager::CreateProcess(OpenFile* executableFile)
 {
     if (processTableMap->NumClear() != 0)
     {
         int pid = processTableMap->Find();
-        processTable[pid] = new AddrSpace(executableFile,pid);
+        processTable[pid] = new ProcessControlBlock(pid,executableFile);
         return processTable[pid];
     }
     else
-    {  
+    {
         return NULL;
     }
     
 }
 
-void ProcessManager::ReleaseAddrSpace(int pid)
+void ProcessManager::ReleaseProcess(int pid)
 {
     processTableMap->Clear(pid);
     delete processTable[pid];
@@ -39,7 +49,19 @@ TranslationEntry* ProcessManager::GetPageTable(int pid)
 {
     if (processTableMap->Test(pid))
     {
-        return processTable[pid]->GetPageTable();
+        return processTable[pid]->GetProcessSpace()->GetPageTable();
+    }
+    else
+    {
+        return NULL;
+    }
+}
+
+Thread* ProcessManager::GetMainThread(int pid)
+{
+    if (processTableMap->Test(pid))
+    {
+        return processTable[pid]->GetMainThread();
     }
     else
     {

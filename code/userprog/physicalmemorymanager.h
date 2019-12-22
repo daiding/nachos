@@ -3,7 +3,7 @@
 
 #include "bitmap.h"
 
-#define PhysicalPageNum 32
+#define PhysicalPageNum 128
 
 class PhysicalPageEntity{
     public:

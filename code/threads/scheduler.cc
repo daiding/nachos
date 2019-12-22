@@ -55,7 +55,7 @@ Scheduler::ReadyToRun (Thread *thread)
 {
     DEBUG('t', "Putting thread %s on ready list.\n", thread->getName());
 
-    thread->setStatus(READY);
+    thread->SetStatus(READY);
     readyList->Append((void *)thread);
 }
 
@@ -103,7 +103,7 @@ Scheduler::Run (Thread *nextThread)
     // had an undetected stack overflow
 
     currentThread = nextThread;		    // switch to the next thread
-    currentThread->setStatus(RUNNING);      // nextThread is now running
+    currentThread->SetStatus(RUNNING);      // nextThread is now running
 
     DEBUG('t', "Switching from thread \"%s\" to thread \"%s\"\n",
           oldThread->getName(), nextThread->getName());
@@ -144,4 +144,9 @@ Scheduler::Print()
 {
     printf("Ready list contents:\n");
     readyList->Mapcar((VoidFunctionPtr) ThreadPrint);
+}
+
+bool Scheduler::RemoveElementFromReadyList(Thread* thread)
+{
+    return readyList->RemoveElement((void*)thread);
 }

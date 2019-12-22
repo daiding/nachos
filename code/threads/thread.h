@@ -39,6 +39,7 @@
 
 #include "copyright.h"
 #include "utility.h"
+#include "list.h"
 
 #ifdef USER_PROGRAM
 #include "machine.h"
@@ -57,7 +58,7 @@
 
 
 // Thread state
-enum ThreadStatus { JUST_CREATED, RUNNING, READY, BLOCKED };
+enum ThreadStatus { JUST_CREATED, RUNNING, READY, BLOCKED, ZOMBIE };
 
 // external function, dummy routine whose sole job is to call Thread::Print
 extern void ThreadPrint(int arg);
@@ -98,15 +99,35 @@ public:
 
     void CheckOverflow();   			// Check if thread has
     // overflowed its stack
-    void setStatus(ThreadStatus st) {
+    void SetStatus(ThreadStatus st) {
         status = st;
     }
+    ThreadStatus GetStatus(){return status;}
+
     char* getName() {
         return (name);
     }
     void Print() {
         printf("%s, ", name);
     }
+    void SetExitStatus(int st){
+        exitStatus = st;
+        return;
+    }
+    int GetExitStatus(){return exitStatus;}
+    void AddChildThread(Thread* child);
+    void ChildThreadExit(Thread* child);
+    void SetParentThread(Thread* parent)
+    {
+        parentThread = parent;
+    }
+    Thread* GetParentThread()
+    {
+        return parentThread;
+    }
+    bool RemoveExitedChild(Thread* thread);
+    void CleanUpReadyForDestroy();
+
 
 private:
     // some of the private data for this class is listed above
@@ -116,7 +137,10 @@ private:
     // (If NULL, don't deallocate stack)
     ThreadStatus status;		// ready, running or blocked
     char* name;
-
+    int exitStatus;
+    Thread* parentThread;
+    List* activeChildThread;
+    List* exitedChildThread;
     void StackAllocate(VoidFunctionPtr func, int arg);
     // Allocate a stack for thread.
     // Used internally by Fork()

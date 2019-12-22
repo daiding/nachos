@@ -13,6 +13,7 @@
 #include "console.h"
 #include "addrspace.h"
 #include "synch.h"
+#include "processmanager.h"
 
 //----------------------------------------------------------------------
 // StartProcess
@@ -24,18 +25,19 @@ void
 StartProcess(char *filename)
 {
     OpenFile *executable = fileSystem->Open(filename);
-    AddrSpace *space;
+    ProcessControlBlock *pcb;
 
     if (executable == NULL) {
         printf("Unable to open file %s\n", filename);
         return;
     }
-    space = processManager->CreateAddrSpace(executable);
-    currentThread->space = space;
+    pcb = processManager->CreateProcess(executable);
+    DEBUG('a', "Create the first process %d\n", pcb->GetProcessID());
+    pcb->SetMainThread(currentThread);
     delete executable; //close file
-    currentProcessID = space->GetProcessID(); 
-    space->InitRegisters();		// set the initial register values
-    space->RestoreState();		// load page table register
+    currentProcessID = pcb->GetProcessID(); 
+    currentThread->space->InitRegisters();		// set the initial register values
+    currentThread->space->RestoreState();		// load page table register
     
     machine->Run();			// jump to the user progam
     ASSERT(FALSE);			// machine->Run never returns;

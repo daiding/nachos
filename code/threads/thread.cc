@@ -38,6 +38,9 @@ Thread::Thread(char* threadName)
     stackTop = NULL;
     stack = NULL;
     status = JUST_CREATED;
+    parentThread = NULL;
+    activeChildThread = new List();
+    exitedChildThread = new List();
 #ifdef USER_PROGRAM
     space = NULL;
 #endif
@@ -62,6 +65,11 @@ Thread::~Thread()
     ASSERT(this != currentThread);
     if (stack != NULL)
         DeallocBoundedArray((char *) stack, StackSize * sizeof(int));
+    delete activeChildThread;
+    delete exitedChildThread;
+    #ifdef USER_PROGRAM
+    processManager->ReleaseProcess(space->GetProcessID());
+    #endif
 }
 
 //----------------------------------------------------------------------
@@ -145,10 +153,19 @@ Thread::Finish ()
 {
     (void) interrupt->SetLevel(IntOff);
     ASSERT(this == currentThread);
-
+    status = ZOMBIE;
     DEBUG('t', "Finishing thread \"%s\"\n", getName());
-
-    threadToBeDestroyed = currentThread;
+    if (parentThread != NULL)
+    {
+        parentThread->ChildThreadExit(currentThread);
+        currentThread->CleanUpReadyForDestroy();
+    }
+    else
+    {
+        currentThread->CleanUpReadyForDestroy();
+        DEBUG('t', "All child threads were destroy!\n");
+        threadToBeDestroyed = currentThread;
+    }
     Sleep();					// invokes SWITCH
     // not reached
 }
@@ -289,6 +306,42 @@ Thread::StackAllocate (VoidFunctionPtr func, int arg)
     machineState[InitialArgState] = arg;
     machineState[WhenDonePCState] = (int) ThreadFinish;
 }
+
+void Thread::AddChildThread(Thread* child)
+{
+    activeChildThread->Append((void*)child);
+    return;
+}
+
+void Thread::ChildThreadExit(Thread* child)
+{
+    activeChildThread->RemoveElement((void*)child);
+    exitedChildThread->Append((void*)child);
+    return;
+}
+
+bool Thread::RemoveExitedChild(Thread* child)
+{
+    return exitedChildThread->RemoveElement((void*)child);
+}
+
+void Thread::CleanUpReadyForDestroy()
+{
+    Thread* child;
+    while ((child = (Thread *)activeChildThread->Remove()) != NULL)
+    {
+        scheduler->RemoveElementFromReadyList(child);
+        child->CleanUpReadyForDestroy();
+        delete child;
+    }
+
+    while ((child = (Thread *)exitedChildThread->Remove()) != NULL)
+    {
+        delete child;
+    }
+    return;
+}
+
 
 #ifdef USER_PROGRAM
 #include "machine.h"

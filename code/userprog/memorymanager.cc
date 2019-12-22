@@ -22,8 +22,10 @@ int MemoryManager::InitializeSwapPage(char* buffer, int size)
 
 void MemoryManager::ProcessPageFault(int badVisualPageNO)
 {
+    
     int processID = currentThread->space->GetProcessID();
     TranslationEntry* pageTable = processManager->GetPageTable(processID);
+    DEBUG('a', "pid = %d, PAGE FAULT!\n", processID);
     int physicalPageNO = physicalMemoryManager->GetOneAvailablePage();
     while (physicalPageNO == -1)//内存空间已满，需要换出一个实页
     {
@@ -40,13 +42,14 @@ void MemoryManager::ProcessPageFault(int badVisualPageNO)
         }
         physicalMemoryManager->ReleasePhysicalPage(physicalPageToSwapOut);
         physicalPageNO = physicalMemoryManager->GetOneAvailablePage();
+        DEBUG('a', "Swap phsical page %d\n",physicalPageToSwapOut);
     }
     swapDiskManager->SwapIn(pageTable[badVisualPageNO].swapPage, physicalPageNO);
     physicalMemoryManager->SetPageInformation(physicalPageNO, processID, badVisualPageNO);
     pageTable[badVisualPageNO].dirty = false;
     pageTable[badVisualPageNO].valid = true;
     pageTable[badVisualPageNO].physicalPage = physicalPageNO;
-    DEBUG('a', "physical page NO: %d, vitrul page NO: %d\n", badVisualPageNO,physicalPageNO);
+    DEBUG('a', "vitrul page NO: %d, physical page NO: %d\n", badVisualPageNO,physicalPageNO);
     return;
 }
 

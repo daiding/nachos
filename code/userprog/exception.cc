@@ -26,6 +26,7 @@
 #include "syscall.h"
 #include "machine.h"
 #include "addrspace.h"
+#include "processmanager.h"
 
 //----------------------------------------------------------------------
 // ExceptionHandler
@@ -53,6 +54,8 @@ static void ExceptionPageFaultHandler();
 static void SysCallInitial(int arg);
 static void SysCallExecHandler();
 static void SysCallExitHandler();
+static void SysCallJoinHandler();
+//static void SysCallForkHandler();
 
 void
 ExceptionHandler(ExceptionType which)
@@ -69,11 +72,15 @@ ExceptionHandler(ExceptionType which)
 					break;
 				case SC_Exit:
 					printf("process call exit()\n");
-					currentThread->Finish();
+					SysCallExitHandler();
 					break;
 				case SC_Exec:
 					printf("process call exec\n");
 					SysCallExecHandler();
+					break;
+				case SC_Join:
+					printf("process call Join\n");
+					SysCallJoinHandler();
 					break;
 				default:
 					printf("Unexpected system call type %d!\n", type);
@@ -95,7 +102,7 @@ static void ExceptionPageFaultHandler()
 {
     int badVisualAddr = machine->ReadRegister(39);
     int badVisualPageNO = badVisualAddr / PageSize;
-	printf("PAGE FAULT START PROCESSING\n");
+	DEBUG('a',"PAGE FAULT START PROCESSING\n");
     memoryManager->ProcessPageFault(badVisualPageNO);
     return;
 }
@@ -105,6 +112,7 @@ static void SysCallInitial(int arg)
 	switch (arg)
 	{
 		case 0:
+			DEBUG('a',"Change the page table and register to prcess %d", currentThread->space->GetProcessID());
 			currentThread->space->RestoreState();
 			currentThread->space->InitRegisters();
 			break;
@@ -127,15 +135,17 @@ static void SysCallExecHandler()
 	{
 		machine->ReadMem(fileNameAddress+i,1,(int*)(fileName+i));
 	} while (i < 50 && fileName[i++]!='\0');
-	printf("exec %s\n",fileName);
 	OpenFile* executableFile = fileSystem->Open(fileName);
-	AddrSpace* processAddrSpace = processManager->CreateAddrSpace(executableFile);
-	if (processAddrSpace != NULL && executableFile != NULL)
+	ProcessControlBlock* processControlBlock = processManager->CreateProcess(executableFile);
+	if (processControlBlock != NULL && executableFile != NULL)
 	{
 		Thread* mainThread = new Thread(fileName);
-		mainThread->space = processAddrSpace;
-		machine->WriteRegister(2, processAddrSpace->GetProcessID());
+		processControlBlock->SetMainThread(mainThread);
+		//mainThread->space = processControlBlock->GetProcessSpace();
+		machine->WriteRegister(2, processControlBlock->GetProcessID());
 		mainThread->Fork(SysCallInitial, 0);
+		mainThread->SetParentThread(currentThread);
+		currentThread->AddChildThread(mainThread);
 	}
 	else 
 	{
@@ -151,7 +161,43 @@ static void SysCallExecHandler()
 
 static void SysCallExitHandler()
 {
+	int exitStatus = machine->ReadRegister(4);
+	currentThread->SetExitStatus(exitStatus);
+	Thread* parent = currentThread->GetParentThread();
+	DEBUG('a', "Get the parent thread!\n");
+	if (parent != NULL && parent->GetStatus() == BLOCKED)
+	{
+		scheduler->ReadyToRun(parent);
+		DEBUG('a', "Wake up the join process!\n");
+	}
+	
 	currentThread->Finish();
-	processManager->ReleaseProcess();
+	return;
+}
+
+static void SysCallJoinHandler()
+{
+	int pid= machine->ReadRegister(4);
+	DEBUG('a', "Join the child process %d\n", pid);
+	Thread* child = processManager->GetMainThread(pid);
+	if (child == NULL)//系统调用出错
+	{
+		machine->WriteRegister(2, -1);
+		return;
+	}
+	while(!currentThread->RemoveExitedChild(child))
+	{
+		DEBUG('a',"the process %d sleep\n", currentThread->space->GetProcessID());
+		(void) interrupt->SetLevel(IntOff);
+		currentThread->Sleep();
+	}
+	int exitStatus = child->GetExitStatus();
+	delete child;
+	machine->WriteRegister(2,exitStatus);
+	printf("the join child process exit status = %d\n", exitStatus);
+	int cur_PC = machine->ReadRegister(PCReg);
+	machine->WriteRegister(PrevPCReg, cur_PC);//通过修改寄存器，使cpu运行下一条指令
+	machine->WriteRegister(PCReg, cur_PC + sizeof(int));
+	machine->WriteRegister(NextPCReg, cur_PC + 2 * sizeof(int));
 	return;
 }

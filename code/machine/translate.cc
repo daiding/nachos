@@ -101,12 +101,13 @@ Machine::ReadMem(int addr, int size, int *value)
     if (exception == PageFaultException)
     {
         machine->RaiseException(exception, addr);
-        exception = Translate(addr, &physicalAddress, size, TRUE);
+        exception = Translate(addr, &physicalAddress, size, FALSE);
     }
     if (exception != NoException && exception != PageFaultException) {
         machine->RaiseException(exception, addr);
         return FALSE;
     }
+    DEBUG('a', "Reading PA 0x%x, %d\n", physicalAddress, size);
     switch (size) {
     case 1:
         data = machine->mainMemory[physicalAddress];
@@ -207,7 +208,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     TranslationEntry *entry;
     unsigned int pageFrame;
 
-    DEBUG('a', "\tTranslate 0x%x, %s: ", virtAddr, writing ? "write" : "read");
+    DEBUG('a', "\tTranslate 0x%x, %s: \n", virtAddr, writing ? "write" : "read");
 
 // check for alignment errors
     if (((size == 4) && (virtAddr & 0x3)) || ((size == 2) && (virtAddr & 0x1))) {
@@ -230,8 +231,8 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
                   virtAddr, visualPageTableSize);
             return AddressErrorException;
         } else if (!visualPageTable[vpn].valid) {
-            DEBUG('a', "virtual page # %d too large for page table size %d!\n",
-                  virtAddr, visualPageTableSize);
+            DEBUG('a', "virtual page # %d is not valid!\n",
+                  vpn);
             return PageFaultException;
         }
         entry = &visualPageTable[vpn];
