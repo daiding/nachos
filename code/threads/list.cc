@@ -244,13 +244,20 @@ bool List::RemoveElement(void* target)
     {
         return false;
     }
-    while (curElement != last)
+    while (curElement != NULL)
     {
         if (curElement->item == target)
         {
             if (preElement == NULL)
             {
                 first = first->next;
+                delete curElement;
+                return true;
+            }
+            else if(curElement->next == NULL)
+            {
+                last = preElement;
+                preElement->next = NULL;
                 delete curElement;
                 return true;
             }
@@ -264,25 +271,6 @@ bool List::RemoveElement(void* target)
         preElement = curElement;
         curElement = curElement->next;
     }
-    if (curElement->item == target)
-    {
-        if (preElement == NULL)
-        {
-                first = first->next;
-                delete curElement;
-                return true;
-        }
-        else
-        {
-            preElement->next = curElement->next;
-            delete curElement;
-            return true;
-        }
-    }
-    else
-    {
-        return false;
-    }
-    
+    return false;
 }
 
