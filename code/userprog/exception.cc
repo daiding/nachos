@@ -143,8 +143,8 @@ static void SysCallExecHandler()
 		//mainThread->space = processControlBlock->GetProcessSpace();
 		machine->WriteRegister(2, processControlBlock->GetProcessID());
 		mainThread->Fork(SysCallInitial, 0);
-		//mainThread->SetParentThread(currentThread);
-		//currentThread->AddChildThread(mainThread);
+		mainThread->SetParentThread(currentThread);
+		currentThread->AddChildThread(mainThread);
 		printf("Exec %s, new process pid is %d\n", fileName, processControlBlock->GetProcessID());
 	}
 	else 

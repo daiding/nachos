@@ -330,9 +330,7 @@ void Thread::CleanUpReadyForDestroy()
     Thread* child;
     while ((child = (Thread *)activeChildThread->Remove()) != NULL)
     {
-        scheduler->RemoveElementFromReadyList(child);
-        child->CleanUpReadyForDestroy();
-        delete child;
+        child->parentThread = NULL;
     }
 
     while ((child = (Thread *)exitedChildThread->Remove()) != NULL)
