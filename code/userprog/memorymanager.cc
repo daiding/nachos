@@ -2,7 +2,6 @@
 #include "system.h"
 MemoryManager::MemoryManager()
 {
-    processNum = 0;
     physicalMemoryManager = new PhysicalMemoryManager();
     swapDiskManager = new SwapDiskManager();
 }
@@ -17,12 +16,12 @@ MemoryManager::~MemoryManager()
 
 int MemoryManager::InitializeSwapPage(char* buffer, int size)
 {
-    return swapDiskManager->InitialVisualMemoryPage(buffer,size);
+    return swapDiskManager->InitialVirtualMemoryPage(buffer,size);
 }
 
-void MemoryManager::ProcessPageFault(int badVisualPageNO)
+void MemoryManager::ProcessPageFault(int badVirtualPageNO)
 {
-    
+    stats->numPageFaults++;
     int processID = currentThread->space->GetProcessID();
     TranslationEntry* pageTable = processManager->GetPageTable(processID);
     DEBUG('a', "pid = %d, PAGE FAULT!\n", processID);
@@ -31,25 +30,28 @@ void MemoryManager::ProcessPageFault(int badVisualPageNO)
     {
         int physicalPageToSwapOut = swapLRU->FindOnePageToSwap();
         int processIdOfSwapOutPage = physicalMemoryManager->GetProcessID(physicalPageToSwapOut);
-        int visualPageNoOfSwapOutPage = physicalMemoryManager->GetVisualPageNO(physicalPageToSwapOut);
+        int virtualPageNoOfSwapOutPage = physicalMemoryManager->GetVirtualPageNO(physicalPageToSwapOut);
         TranslationEntry* thatProcessPageTable = processManager->GetPageTable(processIdOfSwapOutPage);
-        thatProcessPageTable[visualPageNoOfSwapOutPage].valid = false;
-        thatProcessPageTable[visualPageNoOfSwapOutPage].physicalPage = -1;
-        if (thatProcessPageTable[visualPageNoOfSwapOutPage].dirty)
+        thatProcessPageTable[virtualPageNoOfSwapOutPage].valid = false;
+        thatProcessPageTable[virtualPageNoOfSwapOutPage].physicalPage = -1;
+        if (thatProcessPageTable[virtualPageNoOfSwapOutPage].dirty)
         {
-            swapDiskManager->SwapOut(physicalPageToSwapOut, thatProcessPageTable[visualPageNoOfSwapOutPage].swapPage);
-            thatProcessPageTable[visualPageNoOfSwapOutPage].dirty = false;
+            swapDiskManager->SwapOut(physicalPageToSwapOut, thatProcessPageTable[virtualPageNoOfSwapOutPage].swapPage);
+            thatProcessPageTable[virtualPageNoOfSwapOutPage].dirty = false;
         }
         physicalMemoryManager->ReleasePhysicalPage(physicalPageToSwapOut);
         physicalPageNO = physicalMemoryManager->GetOneAvailablePage();
+        ASSERT(physicalPageToSwapOut == physicalPageNO);
         DEBUG('a', "Swap phsical page %d\n",physicalPageToSwapOut);
+        printf("Swap page %d out\n",physicalPageNO);
     }
-    swapDiskManager->SwapIn(pageTable[badVisualPageNO].swapPage, physicalPageNO);
-    physicalMemoryManager->SetPageInformation(physicalPageNO, processID, badVisualPageNO);
-    pageTable[badVisualPageNO].dirty = false;
-    pageTable[badVisualPageNO].valid = true;
-    pageTable[badVisualPageNO].physicalPage = physicalPageNO;
-    DEBUG('a', "vitrul page NO: %d, physical page NO: %d\n", badVisualPageNO,physicalPageNO);
+    swapDiskManager->SwapIn(pageTable[badVirtualPageNO].swapPage, physicalPageNO);
+    printf("Swap page %d in\n",pageTable[badVirtualPageNO].swapPage);
+    physicalMemoryManager->SetPageInformation(physicalPageNO, processID, badVirtualPageNO);
+    pageTable[badVirtualPageNO].dirty = false;
+    pageTable[badVirtualPageNO].valid = true;
+    pageTable[badVirtualPageNO].physicalPage = physicalPageNO;
+    DEBUG('a', "vitrul page NO: %d, physical page NO: %d\n", badVirtualPageNO,physicalPageNO);
     return;
 }
 
@@ -57,7 +59,7 @@ void MemoryManager::ReleaseMemoryPages(TranslationEntry* pageTable, int numPage)
 {
     for (int i = 0; i < numPage; i++)
     {
-        swapDiskManager->ReleaseVisualMemoryPage(pageTable[i].swapPage);
+        swapDiskManager->ReleaseVirtualMemoryPage(pageTable[i].swapPage);
         physicalMemoryManager->ReleasePhysicalPage(pageTable[i].physicalPage);
     }
     return;

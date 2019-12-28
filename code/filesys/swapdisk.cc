@@ -15,27 +15,27 @@ SwapDisk::~SwapDisk()
     delete synchDisk;
 }
 
-int SwapDisk::RequestVisualMemoryPage()
+int SwapDisk::RequestVirtualMemoryPage()
 {
-    int freeVisualPageNO;
+    int freeVirtualPageNO;
     if (swapDiskMemoryFrameMap->NumClear() > 0)
     {
-        freeVisualPageNO = swapDiskMemoryFrameMap->Find();
-        if (!swapDiskMemoryFrameMap->Test(freeVisualPageNO))
+        freeVirtualPageNO = swapDiskMemoryFrameMap->Find();
+        if (!swapDiskMemoryFrameMap->Test(freeVirtualPageNO))
         {
-            swapDiskMemoryFrameMap->Mark(freeVisualPageNO);
+            swapDiskMemoryFrameMap->Mark(freeVirtualPageNO);
         }
     }
     else 
     {
         return -1;
     }
-    return freeVisualPageNO;
+    return freeVirtualPageNO;
 }
 
-bool SwapDisk::VisualPageNumberIsValid(int visualPageNO)
+bool SwapDisk::VirtualPageNumberIsValid(int virtualPageNO)
 {
-    if (swapDiskMemoryFrameMap->Test(visualPageNO))
+    if (swapDiskMemoryFrameMap->Test(virtualPageNO))
     {
         return true;
     }
@@ -46,16 +46,16 @@ bool SwapDisk::VisualPageNumberIsValid(int visualPageNO)
     
 }
 
-void SwapDisk::ReadAtVisualMemoryPage(int visualPageNumber, char *data, int dataSize)
+void SwapDisk::ReadAtVirtualMemoryPage(int virtualPageNumber, char *data, int dataSize)
 {
     char *buffer = new char[BytesNumPerPage];
     bzero(buffer, BytesNumPerPage);
-    synchDisk->ReadSector(visualPageNumber,buffer);
+    synchDisk->ReadSector(virtualPageNumber,buffer);
     bcopy(buffer, data, dataSize);
     return;
 }
 
-void SwapDisk::WriteAtVisualMemoryPage(int visualPageNumber, char *data, int dataSize)
+void SwapDisk::WriteAtVirtualMemoryPage(int virtualPageNumber, char *data, int dataSize)
 {
     char *buffer = new char[BytesNumPerPage];
     bzero(buffer,BytesNumPerPage);

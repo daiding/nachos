@@ -175,7 +175,7 @@ Initialize(int argc, char **argv)
     machine = new Machine(debugUserProg);	// this must come first
     memoryManager = new MemoryManager();
     processManager = new ProcessManager(MaxProcessNum);
-    swapLRU = new SwapLRU(32);
+    swapLRU = new SwapLRU(NumPhysPages);
 #endif
 
 #ifdef FILESYS

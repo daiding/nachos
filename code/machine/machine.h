@@ -32,7 +32,7 @@
 // the disk sector size, for
 // simplicity
 
-#define NumPhysPages    128
+#define NumPhysPages    32
 #define MemorySize 	(NumPhysPages * PageSize)
 #define TLBSize		4		// if there is a TLB, make it small
 
@@ -178,8 +178,8 @@ public:
     TranslationEntry *tlb;		// this pointer should be considered
     // "read-only" to Nachos kernel code
 
-    TranslationEntry *visualPageTable;
-    unsigned int visualPageTableSize;
+    TranslationEntry *virtualPageTable;
+    unsigned int virtualPageTableSize;
 
 private:
     bool singleStep;		// drop back into the debugger after each

@@ -81,26 +81,26 @@ AddrSpace::AddrSpace(OpenFile *executable, int pid)
     DEBUG('a', "Initializing address space, num pages %d, size %d\n",
           numPages, size);
 // first, set up the translation
-    visualPageTable = new TranslationEntry[numPages];
+    virtualPageTable = new TranslationEntry[numPages];
     char buffer[PageSize];
     for (i = 0; i < numPages; i++) {
-        visualPageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
-        visualPageTable[i].physicalPage = -1;
+        virtualPageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
+        virtualPageTable[i].physicalPage = -1;
         if (i < numPages - 1)
         {
             executable->ReadAt(buffer, PageSize, i * PageSize + sizeof(noffH));
-            visualPageTable[i].swapPage = memoryManager->InitializeSwapPage(buffer, PageSize);
+            virtualPageTable[i].swapPage = memoryManager->InitializeSwapPage(buffer, PageSize);
         }
         else
         {
             executable->ReadAt(buffer, size % PageSize, i * PageSize + sizeof(noffH));
-            visualPageTable[i].swapPage = memoryManager->InitializeSwapPage(buffer, size % PageSize);
+            virtualPageTable[i].swapPage = memoryManager->InitializeSwapPage(buffer, size % PageSize);
         }
         
-        visualPageTable[i].valid = FALSE;
-        visualPageTable[i].use = FALSE;
-        visualPageTable[i].dirty = FALSE;
-        visualPageTable[i].readOnly = FALSE;  // if the code segment was entirely on
+        virtualPageTable[i].valid = FALSE;
+        virtualPageTable[i].use = FALSE;
+        virtualPageTable[i].dirty = FALSE;
+        virtualPageTable[i].readOnly = FALSE;  // if the code segment was entirely on
         // a separate page, we could set its
         // pages to be read-only
     }
@@ -119,8 +119,8 @@ AddrSpace::AddrSpace(OpenFile *executable, int pid)
 
 AddrSpace::~AddrSpace()
 {
-    memoryManager->ReleaseMemoryPages(visualPageTable, numPages);
-    delete [] visualPageTable;
+    memoryManager->ReleaseMemoryPages(virtualPageTable, numPages);
+    delete [] virtualPageTable;
 }
 
 //----------------------------------------------------------------------
@@ -176,13 +176,13 @@ void AddrSpace::SaveState()
 
 void AddrSpace::RestoreState()
 {
-    machine->visualPageTable = visualPageTable;
-    machine->visualPageTableSize = numPages;
+    machine->virtualPageTable = virtualPageTable;
+    machine->virtualPageTableSize = numPages;
 }
 
 TranslationEntry* AddrSpace::GetPageTable()
 {
-    return visualPageTable;
+    return virtualPageTable;
 }
 
 int AddrSpace::GetProcessID()

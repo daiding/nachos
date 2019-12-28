@@ -2,7 +2,7 @@
 #include "machine.h"
 #include "system.h"
 
-#define MAX_SWAP_PAGE 128
+#define MAX_SWAP_PAGE 1024
 
 SwapDiskManager::SwapDiskManager()
 {
@@ -17,7 +17,7 @@ SwapDiskManager::~SwapDiskManager()
     fileSystem->Remove("SWAPDISK");
 }
 
-int SwapDiskManager::InitialVisualMemoryPage(char *data, int dataSize)
+int SwapDiskManager::InitialVirtualMemoryPage(char *data, int dataSize)
 {
     if (swapDiskMap->NumClear() == 0)
     {
@@ -41,22 +41,25 @@ int SwapDiskManager::InitialVisualMemoryPage(char *data, int dataSize)
             swapDisk->WriteAt(data,dataSize,swapPageNO * PageSize);
             return swapPageNO;
         }
+        stats->numDiskWrites++;
     }
 }
 
 void SwapDiskManager::SwapOut(int physicalPageNO,int swapPageNO)
 {
+    stats->numDiskWrites++;
     swapDisk->WriteAt(&(machine->mainMemory[physicalPageNO*PageSize]), PageSize,swapPageNO * PageSize);
     return;
 }
 
 void SwapDiskManager::SwapIn(int swapPageNo,int physicalPageNO)
 {
+    stats->numDiskReads++;
     swapDisk->ReadAt(&(machine->mainMemory[physicalPageNO*PageSize]), PageSize, swapPageNo * PageSize);
     return;
 }
 
-void SwapDiskManager::ReleaseVisualMemoryPage(int pageNO)
+void SwapDiskManager::ReleaseVirtualMemoryPage(int pageNO)
 {
     swapDiskMap->Clear(pageNO);
     return;

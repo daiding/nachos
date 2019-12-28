@@ -68,10 +68,10 @@ Machine::Machine(bool debug)
     tlb = new TranslationEntry[TLBSize];
     for (i = 0; i < TLBSize; i++)
         tlb[i].valid = FALSE;
-    visualPageTable = NULL;
+    virtualPageTable = NULL;
 #else	// use linear page table
     tlb = NULL;
-    visualPageTable = NULL;
+    virtualPageTable = NULL;
 #endif
 
     singleStep = debug;

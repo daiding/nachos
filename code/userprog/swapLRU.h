@@ -12,7 +12,6 @@ class SwapLRU
     int FindOnePageToSwap();
     private:
     int* pageLastUsedTime;
-    int pageNum;
 };
 
 #endif

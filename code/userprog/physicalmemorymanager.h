@@ -2,13 +2,14 @@
 #define PHYSICALMEMORYMANAGER_H
 
 #include "bitmap.h"
+#include "machine.h"
 
-#define PhysicalPageNum 128
+#define PhysicalPageNum NumPhysPages
 
 class PhysicalPageEntity{
     public:
     int processID;
-    int visualPageNO;
+    int virtualPageNO;
 };
 
 class PhysicalMemoryManager{
@@ -19,9 +20,9 @@ class PhysicalMemoryManager{
     PhysicalMemoryManager();
     ~PhysicalMemoryManager();
     int GetProcessID(int physicalPageNO);
-    int GetVisualPageNO(int physicalPageNO);
+    int GetVirtualPageNO(int physicalPageNO);
     int GetOneAvailablePage();
-    void SetPageInformation(int physicalPageNO, int processID, int visualPage);
+    void SetPageInformation(int physicalPageNO, int processID, int virtualPage);
     void ReleasePhysicalPage(int physicalPageNO);
 };
 

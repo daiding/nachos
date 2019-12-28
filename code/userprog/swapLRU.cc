@@ -1,10 +1,10 @@
 #include "system.h"
+#include "machine.h"
 #include "swapLRU.h"
 
 SwapLRU::SwapLRU(int pageNumber)
 {
     pageLastUsedTime = new int[pageNumber];
-    pageNum = pageNumber;
 }
 
 SwapLRU::~SwapLRU()
@@ -22,7 +22,7 @@ int SwapLRU::FindOnePageToSwap()
 {
     int minTimeTick = pageLastUsedTime[0];
     int longestTimeNotUsedPageNO = 0;
-    for (int i = 1; i < pageNum; i++)
+    for (int i = 1; i < NumPhysPages; i++)
     {
         if (minTimeTick > pageLastUsedTime[i])
         {

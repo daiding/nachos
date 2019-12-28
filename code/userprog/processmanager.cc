@@ -25,7 +25,8 @@ ProcessManager::~ProcessManager()
 
 ProcessControlBlock* ProcessManager::CreateProcess(OpenFile* executableFile)
 {
-    if (processTableMap->NumClear() != 0)
+
+    if (executableFile != NULL && processTableMap->NumClear() != 0)
     {
         int pid = processTableMap->Find();
         processTable[pid] = new ProcessControlBlock(pid,executableFile);

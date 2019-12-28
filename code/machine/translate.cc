@@ -107,6 +107,7 @@ Machine::ReadMem(int addr, int size, int *value)
         machine->RaiseException(exception, addr);
         return FALSE;
     }
+    swapLRU->UpdatePageLastUsedTime(physicalAddress/PageSize);
     DEBUG('a', "Reading PA 0x%x, %d\n", physicalAddress, size);
     switch (size) {
     case 1:
@@ -163,6 +164,7 @@ Machine::WriteMem(int addr, int size, int value)
         machine->RaiseException(exception, addr);
         return FALSE;
     }
+    swapLRU->UpdatePageLastUsedTime(physicalAddress/PageSize);
     switch (size) {
     case 1:
         machine->mainMemory[physicalAddress] = (unsigned char) (value & 0xff);
@@ -217,8 +219,8 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     }
 
     // we must have either a TLB or a page table, but not both!
-    ASSERT(tlb == NULL || visualPageTable == NULL);
-    ASSERT(tlb != NULL || visualPageTable != NULL);
+    ASSERT(tlb == NULL || virtualPageTable == NULL);
+    ASSERT(tlb != NULL || virtualPageTable != NULL);
 
 // calculate the virtual page number, and offset within the page,
 // from the virtual address
@@ -226,16 +228,16 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
     offset = (unsigned) virtAddr % PageSize;
 
     if (tlb == NULL) {		// => page table => vpn is index into table
-        if (vpn >= visualPageTableSize) {
+        if (vpn >= virtualPageTableSize) {
             DEBUG('a', "virtual page # %d too large for page table size %d!\n",
-                  virtAddr, visualPageTableSize);
+                  virtAddr, virtualPageTableSize);
             return AddressErrorException;
-        } else if (!visualPageTable[vpn].valid) {
+        } else if (!virtualPageTable[vpn].valid) {
             DEBUG('a', "virtual page # %d is not valid!\n",
                   vpn);
             return PageFaultException;
         }
-        entry = &visualPageTable[vpn];
+        entry = &virtualPageTable[vpn];
     } else {
         for (entry = NULL, i = 0; i < TLBSize; i++)
             if (tlb[i].valid && ((unsigned int) tlb[i].virtualPage == vpn)) {

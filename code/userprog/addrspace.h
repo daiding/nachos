@@ -33,7 +33,7 @@ public:
     TranslationEntry* GetPageTable();
     int GetProcessID();
 private:
-    TranslationEntry *visualPageTable;	// Assume linear page table translation
+    TranslationEntry *virtualPageTable;	// Assume linear page table translation
     // for now!
     unsigned int numPages;		// Number of pages in the virtual
     // address space

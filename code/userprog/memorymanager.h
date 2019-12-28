@@ -14,7 +14,6 @@
 class MemoryManager
 {
     private:
-    int processNum;
     PhysicalMemoryManager* physicalMemoryManager;
     SwapDiskManager* swapDiskManager;
     public:
@@ -22,7 +21,7 @@ class MemoryManager
     ~MemoryManager();
     int InitializeSwapPage(char *buffer, int size);
     void ReleaseMemoryPages(TranslationEntry* pageTable, int pageNO);
-    void ProcessPageFault(int badVisualAddrNO);//处理缺页中断
+    void ProcessPageFault(int badVirtualAddrNO);//处理缺页中断
 };
 
 #endif
